@@ -18,10 +18,11 @@ struct file_operations my_fops;
 static int sysled_init(void) {
 	int errNo;
 	int devno = MKDEV(MAJORNUM, MINORNUM);
-	errNo = gpio_request(GPIO_NUM, "gpio164");
 
+	errNo = gpio_request(GPIO_NUM, "gpio164");
 	if (errNo < 0) {
 		printk(KERN_ALERT "gpio_request failed: %d", errNo);
+		return -1;
 	}
 
 	gpio_direction_output(GPIO_NUM, 1);
@@ -30,12 +31,15 @@ static int sysled_init(void) {
 	errNo = register_chrdev_region(devno, 1, "sysled4");
 	if (errNo < 0) {
 		printk(KERN_ALERT "Registration of device number failed! %d\n", errNo);
+		gpio_free(GPIO_NUM);
 	}
 
 	if (cdev_add(&my_cdev, devno, 1) < 0) {
 		printk(KERN_ALERT "Cdev_add failed! :(");
+		unregister_chrdev_region(my_cdev.dev, 1);
+		gpio_free(GPIO_NUM);
 	}
-
+	
 	return 0;
 }
 

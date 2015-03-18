@@ -15,25 +15,29 @@ MODULE_LICENSE("Dual BSD/GPL");
 static struct cdev my_cdev;
 struct file_operations my_fops;
 
-static int bootkey_init(void) {
+static int sysled_init(void) {
 	int errNo;
 	int devno = MKDEV(MAJORNUM, MINORNUM);
-	errNo = gpio_request(GPIO_NUM, "gpio7");
 
+	errNo = gpio_request(GPIO_NUM, "gpio164");
 	if (errNo < 0) {
-		printk(KERN_ERR "gpio_request failed: %d", errNo);
+		printk(KERN_ALERT "gpio_request failed: %d", errNo);
+		return -1;
 	}
 
-	gpio_direction_input(GPIO_NUM);
+	gpio_direction_output(GPIO_NUM, 1);
 	cdev_init(&my_cdev, &my_fops);
-	
-	errNo = register_chrdev_region(devno, 1, "boot_key");
+
+	errNo = register_chrdev_region(devno, 1, "sysled4");
 	if (errNo < 0) {
-		printk(KERN_ERR "Registration of device number failed! %d\n", errNo);
+		printk(KERN_ALERT "Registration of device number failed! %d\n", errNo);
+		gpio_free(GPIO_NUM);
 	}
 
 	if (cdev_add(&my_cdev, devno, 1) < 0) {
-		printk(KERN_ERR "Cdev_add failed! :(");
+		printk(KERN_ALERT "Cdev_add failed! :(");
+		unregister_chrdev_region(my_cdev.dev, 1);
+		gpio_free(GPIO_NUM);
 	}
 
 	return 0;

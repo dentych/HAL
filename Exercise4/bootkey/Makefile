@@ -16,12 +16,15 @@ modules:
 .PHONY: modules clean
 
 clean:
-	@rm -f *.o modules* Module* *.mod.c *.ko
+	@rm -f *.o modules* Module* *.mod.c *.ko .bootkey*
+	@rm -rf .tmp*
 	@echo "CLEAN *.o"
 	@echo "CLEAN modules*"
 	@echo "CLEAN Module*"
 	@echo "CLEAN *.mod.c"
 	@echo "CLEAN *.ko"
+	@echo "CLEAN .bootkey*"
+	@echo "CLEAN .tmp*"
 
 else
     # called from kernel build system: just declare what our modules are
