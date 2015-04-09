@@ -23,7 +23,7 @@ struct file_operations psoc4fops;
 // SPI structs
 static struct spi_device * psoc4_spi_device = NULL;
 static struct spi_driver psoc4_spi_driver = {
-	.driver = {
+	.driver = {1
 		.name = "psoc4",
 		.bus = &spi_bus_type,
 		.owner = THIS_MODULE,
@@ -32,10 +32,28 @@ static struct spi_driver psoc4_spi_driver = {
 	.remove = __devexit_p(psoc4_spi_remove),
 };
 
+/* PSoC4 Device Data */
+struct psoc4 {
+  int revision;
+};
+
 static int __devinit psoc4_spi_probe(struct spi_device * spi) {
 	int err;
 	uint8 value;
 	struct psoc4 * psocdev;
+
+	printk(KERN_NOTICE "New SPI device: %s using chip select: %i\n",
+		spi->modalias, spi->chip_select);
+
+	spi->bits_per_word = 8;
+	spi_setup(spi);
+
+	// Only one device
+	psoc4_spi_device = spi;
+
+	err = psoc4_spi_read_reg8(spi, PSOC4_ID, &value);
+	printk(KERN_NOTICE "Probing PSoC4, Revision %i\n",
+		value);
 }
 
 static int __init psoc4_cdrv_init(void) {
