@@ -49,9 +49,15 @@ static int sysled_init(void) {
 	sysled_class->dev_attrs = sysled_class_attrs;
 
 	sysled_device = device_create(sysled_class, NULL, devt, NULL, "sysled4");
+	if (IS_ERR(sysled_device)) {
+		printk(KERN_ALERT "Device creation failed.");
+		goto error_devicecreate;
+	}
 
 	return 0;
 
+	error_devicecreate:
+		PTR_ERR(sysled_device);
 	error_classcreate:
 		PTR_ERR(sysled_class);
 		unregister_chrdev_region(devt, 1);
@@ -61,7 +67,9 @@ static int sysled_init(void) {
 }
 
 static void __exit sysled_exit(void) {
+	device_destroy(sysled_class, devt);
 	class_destroy(sysled_class);
+	unregister_chrdev_region(devt, 1);
 }
 /*
 
