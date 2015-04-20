@@ -4,8 +4,9 @@
 #include <linux/device.h>
 #include <asm/uaccess.h>
 #include <linux/module.h>
+#include <linux/timer.h>
 
-#define GPIO_NUM 163
+#define GPIO_NUM 164
 
 MODULE_LICENSE("Dual BSD/GPL");
 
@@ -13,22 +14,76 @@ struct file_operations my_fops;
 static dev_t devt;
 static struct class *sysled_class;
 static struct device *sysled_device;
+struct timer_list led_timer;
 
-static ssize_t sysled_brightness_show(struct device *dev, struct device_attribute *attr, char *buf) {
-	// Nothing at all
-	printk(KERN_ALERT "Hello from sysled show!\n");
+// Variables for toggle rate and toggle state.
+static int togglestate = 0;
+static int togglerate = 0;
 
-	return 0;
+static ssize_t sysled_toggle_state_show(struct device *dev, struct device_attribute *attr, char *buf) {
+	int value = togglestate;
+	int len = sprintf(buf, "%d\n", value);
+	return len;
 }
 
-static ssize_t sysled_brightness_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count) {
-	// Nothing at all
+static ssize_t sysled_toggle_state_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count) {
+	ssize_t ret;
+	unsigned long value;
 
-	return 0;
+	if ((ret = kstrtoul(buf, 10, &value)) < 0) {
+		printk(KERN_ALERT "STORE ERROR: %d\n", ret);
+		return ret;
+	}
+
+	ret = count;
+	
+	togglestate = value;
+	
+	if (togglestate > 0) {
+		gpio_set_value(GPIO_NUM, 0);
+		led_timer.expires = jiffies + togglerate;
+		add_timer(&led_timer);
+	}
+
+	return ret;
+}
+
+static ssize_t sysled_toggle_rate_show(struct device *dev, struct device_attribute *attr, char *buf) {
+	int value = togglerate;
+	int len = sprintf(buf, "%d\n", value);
+	return len;
+}
+
+static ssize_t sysled_toggle_rate_store(struct device *dev, struct device_attribute *attr, const char *buf, size_t count) {
+	ssize_t ret;
+	unsigned long data;
+	if ((ret = kstrtoul(buf, 10, &data)) < 0) {
+		printk(KERN_ALERT "STORE ERROR: %d\n", ret);
+		return ret;
+	}
+	ret = count;
+	togglerate = data;
+	return ret;
+}
+
+static void timer_funct(unsigned long param) {
+	int value;
+	if (togglestate > 0) {
+		led_timer.expires = jiffies + togglerate;
+		add_timer(&led_timer);
+
+		// Toggle LED
+		value = gpio_get_value(GPIO_NUM);
+		if (value > 0)
+			gpio_set_value(GPIO_NUM, 0);
+		else
+			gpio_set_value(GPIO_NUM, 1);
+	}
 }
 
 static struct device_attribute sysled_class_attrs[] = {
-	__ATTR(brightness, 0644, sysled_brightness_show, sysled_brightness_store),
+	__ATTR(toggle_state, 0644, sysled_toggle_state_show, sysled_toggle_state_store),
+	__ATTR(toggle_rate, 0644, sysled_toggle_rate_show, sysled_toggle_rate_store),
 	__ATTR_NULL,
 };
 
@@ -53,6 +108,10 @@ static int sysled_init(void) {
 		printk(KERN_ALERT "Device creation failed.");
 		goto error_devicecreate;
 	}
+
+	// Init timer
+	init_timer(&led_timer);
+	led_timer.function = timer_funct;
 
 	return 0;
 
