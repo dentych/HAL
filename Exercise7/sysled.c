@@ -46,7 +46,7 @@ static int sysled_init(void) {
 		goto error_classcreate;
 	}
 
-	sysled_class->dev_groups = sysled_class_attrs;
+	sysled_class->dev_attrs = sysled_class_attrs;
 
 	sysled_device = device_create(sysled_class, NULL, devt, NULL, "sysled4");
 

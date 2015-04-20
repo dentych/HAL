@@ -10,3 +10,5 @@ Store og show metoder:
 
 Exit metode:
 * Deallokere memory
+* device_destroy
+* class_destroy
