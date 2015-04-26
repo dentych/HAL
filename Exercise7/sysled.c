@@ -117,6 +117,7 @@ static int sysled_init(void) {
 
 	error_devicecreate:
 		PTR_ERR(sysled_device);
+		class_destroy(sysled_class);
 	error_classcreate:
 		PTR_ERR(sysled_class);
 		unregister_chrdev_region(devt, 1);
